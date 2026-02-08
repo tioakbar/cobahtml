@@ -1,0 +1,2912 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <title>AI Career Tower Battle</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <!-- Three.js r128 + OrbitControls -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Lilita+One&family=Roboto:wght@400;700&display=swap');
+
+    * {
+      box-sizing: border-box;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+    }
+    body {
+      overflow: hidden;
+      background-color: #020617;
+      font-family: 'Roboto', sans-serif;
+    }
+
+    #gameCanvas {
+      display: block;
+    }
+
+    #loading {
+      position: absolute;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      color: #e5e7eb;
+      font-family: 'Lilita One', cursive;
+      font-size: 24px;
+      text-shadow: 1px 1px 0 #0f172a;
+      z-index: 30;
+      display: none;
+    }
+
+    /* LOGIN SCREEN */
+    #login-screen,
+    #menu-screen,
+    #difficulty-overlay,
+    #quiz-overlay,
+    #result-overlay,
+    #leaderboard-overlay {
+
+      position: absolute;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 20;
+    }
+
+    #login-screen {
+      background: radial-gradient(circle at top, #60a5fa 0, #1d4ed8 35%, #020617 100%);
+      display: flex; /* default tampil dulu */
+    }
+
+    .login-box, .menu-box, .difficulty-box, .quiz-box, .result-box {
+      background: linear-gradient(to bottom right, #0f172a, #1e293b);
+      border-radius: 18px;
+      padding: 24px;
+      max-width: 420px;
+      width: 90%;
+      text-align: center;
+      color: #e5e7eb;
+      box-shadow: 0 20px 50px rgba(0,0,0,0.8);
+      border: 2px solid #38bdf8;
+    }
+
+    .game-title {
+      font-family: 'Lilita One', cursive;
+      font-size: 30px;
+      margin-bottom: 12px;
+      color: #facc15;
+      text-shadow: 2px 2px 0 #000;
+      letter-spacing: 1px;
+    }
+
+    .login-input {
+      width: 100%;
+      padding: 10px 12px;
+      margin-bottom: 10px;
+      border-radius: 8px;
+      border: 1px solid #60a5fa;
+      background: #020617;
+      color: #fff;
+    }
+
+    .primary-btn, .menu-btn, .result-btn, .difficulty-btn {
+      width: 100%;
+      padding: 10px 12px;
+      margin-top: 8px;
+      border-radius: 10px;
+      border: none;
+      cursor: pointer;
+      font-family: 'Lilita One', cursive;
+      font-size: 16px;
+      background: linear-gradient(to right, #22c55e, #38bdf8);
+      box-shadow: 0 4px 0 #0f766e;
+      color: #fff;
+      transition: transform 0.08s, box-shadow 0.08s;
+    }
+    .primary-btn:hover,
+    .menu-btn:hover,
+    .result-btn:hover,
+    .difficulty-btn:hover {
+      transform: translateY(2px);
+      box-shadow: 0 2px 0 #0f766e;
+    }
+
+    /* MENU SCREEN */
+    #menu-screen {
+      background: radial-gradient(circle at top, #1d4ed8 0, #020617 70%);
+    }
+    .menu-title-anim {
+      font-family: 'Lilita One', cursive;
+      font-size: 34px;
+      margin-bottom: 6px;
+      color: #facc15;
+      text-shadow: 0 0 12px rgba(250,204,21,0.8), 2px 2px 0 #000;
+      animation: glowTitle 2s ease-in-out infinite;
+    }
+    .menu-subtitle {
+      font-size: 13px;
+      color: #bfdbfe;
+      margin-bottom: 16px;
+    }
+    .menu-btn {
+      margin-top: 10px;
+    }
+    @keyframes glowTitle {
+      0%,100% { transform: translateY(0); text-shadow: 0 0 10px rgba(250,204,21,0.8), 2px 2px 0 #000; }
+      50% { transform: translateY(-3px); text-shadow: 0 0 20px rgba(248,250,252,1); }
+    }
+
+    /* DIFFICULTY OVERLAY */
+    #difficulty-overlay {
+      background: rgba(15,23,42,0.9);
+    }
+    .difficulty-box h2 {
+      margin-top: 0;
+      font-family: 'Lilita One', cursive;
+      color: #facc15;
+      text-shadow: 1px 1px 0 #000;
+    }
+    .difficulty-row {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-top: 10px;
+    }
+    .difficulty-btn {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: linear-gradient(to right, #1e3a8a, #0f172a);
+      border: 1px solid #38bdf8;
+    }
+    .difficulty-label {
+      font-size: 15px;
+    }
+    .difficulty-tag {
+      font-size: 12px;
+      padding: 2px 8px;
+      border-radius: 999px;
+      background: #22c55e;
+      color: #022c22;
+    }
+    .difficulty-icon {
+      margin-right: 8px;
+      font-size: 18px;
+    }
+
+    .difficulty-flame {
+      display: inline-block;
+      animation: diffFlame 1.4s infinite;
+    }
+    .difficulty-wave {
+      display: inline-block;
+      animation: diffWave 1.6s infinite;
+    }
+    .difficulty-snow {
+      display: inline-block;
+      animation: diffSnow 1.8s infinite;
+    }
+    @keyframes diffFlame {
+      0%,100% { transform: translateY(0) scale(1); }
+      50% { transform: translateY(-2px) scale(1.1); }
+    }
+    @keyframes diffWave {
+      0%,100% { transform: translateY(0); }
+      50% { transform: translateY(-1px); }
+    }
+    @keyframes diffSnow {
+      0%,100% { transform: translateY(0); opacity: 1; }
+      50% { transform: translateY(1px); opacity: 0.7; }
+    }
+
+    /* UI LAYER IN-GAME */
+    #ui-layer {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      display: none;
+      flex-direction: column;
+      justify-content: space-between;
+      z-index: 10;
+    }
+
+    .top-bar {
+      pointer-events: auto;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 16px;
+      width: 100%;
+      background: linear-gradient(to bottom, #1d4ed8, #1e3a8a);
+      border-bottom: 3px solid #0f172a;
+      box-shadow: 0 4px 12px rgba(15,23,42,0.6);
+    }
+    .hud-pill {
+      background: #1e40af;
+      color: #facc15;
+      padding: 6px 12px;
+      border-radius: 12px;
+      font-family: 'Lilita One', cursive;
+      font-size: 16px;
+      border: 2px solid #60a5fa;
+      box-shadow: inset 0 2px 4px rgba(0,0,0,0.3), 0 2px 4px rgba(15,23,42,0.7);
+      text-shadow: 1px 1px 0 #000;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .timer-pill::before { content: "⏰"; font-size: 14px; }
+    .score-pill::before { content: "👑"; font-size: 14px; }
+
+    .hp-global {
+      background: #020617;
+      border-radius: 10px;
+      border: 2px solid #38bdf8;
+      padding: 2px 8px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      color: #e5e7eb;
+      font-size: 12px;
+      text-shadow: 1px 1px 0 #000;
+    }
+    .hp-bar-outer {
+      width: 90px;
+      height: 10px;
+      background: #111827;
+      border-radius: 999px;
+      overflow: hidden;
+      border: 1px solid #4b5563;
+    }
+    .hp-bar-inner-player {
+      height: 100%;
+      width: 100%;
+      background: linear-gradient(to right, #22c55e, #bbf7d0);
+      transition: width 0.2s;
+    }
+    .hp-bar-inner-enemy {
+      height: 100%;
+      width: 100%;
+      background: linear-gradient(to right, #f97373, #fecaca);
+      transition: width 0.2s;
+    }
+
+    .top-right-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .exit-btn-top {
+      pointer-events: auto;
+      padding: 6px 10px;
+      border-radius: 999px;
+      border: 1px solid #fda4af;
+      background: linear-gradient(to right, #b91c1c, #7f1d1d);
+      color: #fee2e2;
+      font-family: 'Lilita One', cursive;
+      font-size: 13px;
+      cursor: pointer;
+      box-shadow: 0 3px 0 #450a0a;
+    }
+    .exit-btn-top:hover {
+      transform: translateY(1px);
+      box-shadow: 0 1px 0 #450a0a;
+    }
+
+    .bottom-panel-container {
+      pointer-events: auto;
+      display: flex;
+      justify-content: center;
+      width: 100%;
+    }
+    .battle-deck {
+      background: linear-gradient(to bottom, #1d4ed8 0%, #1e3a8a 40%, #0f172a 100%);
+      border-top: 4px solid #60a5fa;
+      border-radius: 24px 24px 0 0;
+      padding: 20px 15px 15px 15px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 15px;
+      position: relative;
+      box-shadow: 0 -5px 20px rgba(15,23,42,0.7);
+      width: 100%;
+      max-width: 500px;
+    }
+    .deck-upper-row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 15px;
+      width: 100%;
+    }
+    .next-area-left {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding-right: 15px;
+      border-right: 2px solid rgba(255,255,255,0.2);
+    }
+    .next-label {
+      font-family: 'Lilita One', cursive;
+      font-size: 12px;
+      color: #e5e7eb;
+      margin-bottom: 4px;
+      text-transform: uppercase;
+      text-shadow: 1px 1px 0 #000;
+    }
+    .next-card-slot {
+      width: 60px; height: 76px;
+      background: #0f172a;
+      border: 3px solid #020617;
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      opacity: 0.9;
+      box-shadow: inset 0 0 10px #000;
+    }
+    .next-emoji { font-size: 28px; }
+
+    #hand-container {
+      display: flex;
+      gap: 10px;
+    }
+
+    .card-slot {
+      width: 75px;
+      height: 96px;
+      background: linear-gradient(to bottom right, #1d4ed8, #1e3a8a);
+      border: 3px solid #020617;
+      border-radius: 10px;
+      position: relative;
+      cursor: pointer;
+      transition: transform 0.1s, border-color 0.2s, box-shadow 0.2s;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      overflow: visible;
+      box-shadow: 0 4px 8px rgba(15,23,42,0.8), inset 0 0 15px rgba(15,23,42,0.7);
+    }
+    .card-slot:active { transform: scale(0.95); }
+    .card-slot:hover:not(.disabled) {
+      border-color: #facc15;
+      box-shadow: 0 0 15px #facc15, inset 0 0 10px rgba(15,23,42,0.8);
+      transform: translateY(-4px);
+      z-index: 2;
+    }
+    .card-slot.disabled {
+      filter: grayscale(90%) brightness(0.7);
+      cursor: not-allowed;
+      border-color: #4b5563;
+    }
+
+    .card-cost {
+      position: absolute;
+      top: -8px; left: -8px;
+      width: 28px; height: 28px;
+      background: linear-gradient(to bottom, #f97316, #ea580c);
+      border: 2px solid #7c2d12;
+      border-radius: 50% 50% 0 50%;
+      transform: rotate(-45deg);
+      color: #fff;
+      font-family: 'Lilita One', cursive;
+      font-size: 16px;
+      display: flex; align-items: center; justify-content: center;
+      z-index: 5;
+      box-shadow: 2px 2px 4px rgba(0,0,0,0.6);
+      text-shadow: 1px 1px 0 #000;
+    }
+    .card-cost span { transform: rotate(45deg); }
+
+    .card-emoji {
+      font-size: 36px;
+      filter: drop-shadow(0 4px 4px rgba(0,0,0,0.6));
+      margin-bottom: 10px;
+    }
+
+    .card-name {
+      position: absolute;
+      bottom: 2px;
+      font-family: 'Lilita One', cursive;
+      font-size: 11px;
+      color: #fff;
+      text-align: center;
+      text-transform: uppercase;
+      text-shadow: 1px 1px 2px #000, 0 0 4px #bfdbfe;
+      width: 90%;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .deck-lower-row {
+      width: 100%;
+      display: flex;
+      justify-content: center;
+      margin-top: 5px;
+    }
+    .elixir-wrapper-cr {
+      position: relative;
+      width: 90%;
+      height: 30px;
+      background: #020617;
+      border-radius: 15px;
+      border: 3px solid #1d4ed8;
+      box-shadow: inset 0 4px 8px rgba(15,23,42,0.9);
+      display: flex;
+      align-items: center;
+    }
+    .elixir-icon-big {
+      position: absolute;
+      left: -10px;
+      top: -6px;
+      width: 42px;
+      height: 42px;
+      background: linear-gradient(to bottom, #38bdf8, #0ea5e9);
+      border: 3px solid #0369a1;
+      border-radius: 50%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-size: 22px;
+      z-index: 5;
+      box-shadow: 0 4px 6px rgba(15,23,42,0.8);
+    }
+    .elixir-fill-cr {
+      height: 100%;
+      width: 50%;
+      background: linear-gradient(to right, #22c55e, #a855f7, #38bdf8);
+      border-radius: 12px;
+      box-shadow: inset 0 2px 4px rgba(255,255,255,0.3), 0 0 10px #38bdf8;
+      transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .elixir-text-cr {
+      position: absolute;
+      right: 12px;
+      color: #fff;
+      font-family: 'Lilita One', cursive;
+      font-size: 16px;
+      text-shadow: 1px 1px 2px #000;
+      letter-spacing: 1px;
+      z-index: 2;
+    }
+
+    /* QUIZ */
+    #quiz-overlay {
+      background: rgba(15,23,42,0.85);
+    }
+    .quiz-header {
+      font-family: 'Lilita One', cursive;
+      color: #facc15;
+      font-size: 22px;
+      margin-bottom: 8px;
+      text-shadow: 1px 1px 0 #000;
+    }
+    .quiz-options-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-top: 16px;
+    }
+    .quiz-btn {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px;
+      border-radius: 10px;
+      background: #020617;
+      border: 1px solid #1d4ed8;
+      color: #fff;
+      cursor: pointer;
+      font-size: 13px;
+      text-align: left;
+    }
+    .quiz-btn:hover {
+      background: #1d4ed8;
+      border-color: #60a5fa;
+    }
+    .quiz-btn-label {
+      min-width: 26px;
+      height: 26px;
+      border-radius: 8px;
+      background: #0ea5e9;
+      color: #fefce8;
+      border: 1px solid #0369a1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Lilita One', cursive;
+      font-size: 14px;
+    }
+
+    /* RESULT OVERLAY */
+    #result-overlay {
+      background: rgba(15,23,42,0.9);
+    }
+    .result-title {
+      font-family: 'Lilita One', cursive;
+      font-size: 26px;
+      margin-bottom: 8px;
+      color: #facc15;
+      text-shadow: 2px 2px 0 #000;
+    }
+    .result-detail {
+      font-size: 14px;
+      margin-bottom: 20px;
+    }
+
+  </style>
+</head>
+<body>
+
+  <div id="loading">MEMUAT ARENA...</div>
+
+  <!-- LOGIN -->
+  <div id="login-screen">
+    <div class="login-box">
+      <div class="game-title">Masuk Arena Karier AI</div>
+      <p style="font-size: 14px; color: #e5e7eb; margin-bottom: 16px; line-height: 1.4;">
+        Isi identitasmu dulu sebelum memasuki <b>AI Career Tower Battle</b>.
+      </p>
+      <input type="text" id="p-name" class="login-input" placeholder="Nama Kamu">
+      <input type="text" id="p-class" class="login-input" placeholder="Kelas">
+
+      <!-- Tombol trigger sound di halaman login -->
+      <button class="primary-btn" style="margin-top:4px;background:linear-gradient(to right,#38bdf8,#6366f1);" onclick="triggerLoginSound()">
+        🔊 Nyalakan Musik
+      </button>
+
+      <button class="primary-btn" onclick="handleLogin()">LANJUT KE MENU</button>
+    </div>
+  </div>
+
+  <!-- MENU -->
+  <div id="menu-screen">
+    <div class="menu-box">
+      <div class="menu-title-anim">AI Career Tower Battle</div>
+      <div class="menu-subtitle">Pilih mode, atur strategi, dan jadilah juara arena karier AI!</div>
+
+      <button class="menu-btn" onclick="openDifficultySelect()">
+        🎮 Singleplayer
+      </button>
+      <button class="menu-btn" onclick="alert('Mode Multiplayer akan diaktifkan di versi berikutnya 😊')">
+        👥 Multiplayer (Coming Soon)
+      </button>
+      <button class="menu-btn" onclick="openLeaderboard()">
+        🏆 Leaderboard
+      </button>
+      <button class="menu-btn" onclick="exitGameApp()">
+        ❌ Exit
+      </button>
+    </div>
+  </div>
+
+  <!-- DIFFICULTY SELECT -->
+  <div id="difficulty-overlay">
+    <div class="difficulty-box">
+      <h2>Pilih Tingkat Kesulitan</h2>
+      <p style="font-size: 13px; color:#e5e7eb;margin-bottom:10px;">
+        Semakin tinggi tingkat kesulitan, semakin agresif lawan mengeluarkan monster.
+      </p>
+      <div class="difficulty-row">
+        <button class="difficulty-btn" onclick="startSingleplayer('Rendah')">
+          <span class="difficulty-label">
+            <span class="difficulty-snow">❄️</span> Rendah
+          </span>
+          <span class="difficulty-tag">Santai belajar</span>
+        </button>
+        <button class="difficulty-btn" onclick="startSingleplayer('Sedang')">
+          <span class="difficulty-label">
+            <span class="difficulty-wave">🌊</span> Sedang
+          </span>
+          <span class="difficulty-tag">Seimbang</span>
+        </button>
+        <button class="difficulty-btn" onclick="startSingleplayer('Sulit')">
+          <span class="difficulty-label">
+            <span class="difficulty-flame">🔥</span> Sulit
+          </span>
+          <span class="difficulty-tag">Tantangan maksimal</span>
+        </button>
+      </div>
+      <button class="result-btn" style="margin-top:14px;background:linear-gradient(to right,#4b5563,#020617);box-shadow:0 3px 0 #020617;" onclick="closeDifficultySelect()">
+        Kembali ke Menu
+      </button>
+    </div>
+  </div>
+
+  <!-- TOP / BOTTOM HUD -->
+  <div id="ui-layer">
+    <div class="top-bar">
+      <div class="top-left-group" style="display:flex;align-items:center;gap:8px;">
+        <div class="hud-pill timer-pill" id="game-timer">02:00</div>
+        <div class="hp-global">
+          <span>🛡 Kamu</span>
+          <div class="hp-bar-outer">
+            <div class="hp-bar-inner-player" id="hp-global-player"></div>
+          </div>
+        </div>
+        <div class="hp-global">
+          <span>💀 Lawan</span>
+          <div class="hp-bar-outer">
+            <div class="hp-bar-inner-enemy" id="hp-global-enemy"></div>
+          </div>
+        </div>
+      </div>
+      <div class="top-right-group">
+        <div class="hud-pill score-pill" id="game-score">0</div>
+        <button class="exit-btn-top" onclick="exitToMenu()">Exit</button>
+      </div>
+    </div>
+
+    <div class="bottom-panel-container">
+      <div class="battle-deck">
+        <div class="deck-upper-row">
+          <div class="next-area-left">
+            <div class="next-label">NEXT</div>
+            <div class="next-card-slot" id="next-card-preview">
+              <div class="next-emoji">🤖</div>
+            </div>
+          </div>
+          <div id="hand-container"></div>
+        </div>
+
+        <div class="deck-lower-row">
+          <div class="elixir-wrapper-cr">
+            <div class="elixir-icon-big">💧</div>
+            <div class="elixir-fill-cr" id="elixir-fill" style="width: 50%;"></div>
+            <div class="elixir-text-cr" id="elixir-text">5/10</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- QUIZ -->
+  <div id="quiz-overlay">
+    <div class="quiz-box">
+      <div class="quiz-header">QUIZ TIME!</div>
+      <div class="quiz-question" id="q-text" style="font-family: sans-serif; font-size: 14px;">
+        Loading question...
+      </div>
+      <div class="quiz-options-grid" id="q-options"></div>
+    </div>
+  </div>
+
+  <!-- RESULT -->
+  <!-- LEADERBOARD -->
+  <div id="leaderboard-overlay">
+    <div class="menu-box">
+      <div class="menu-title-anim">🏆 Leaderboard</div>
+      <p style="font-size:13px;color:#e5e7eb;margin-bottom:10px;">
+        Top skor dari Google Spreadsheet (real-time).
+      </p>
+      <div id="leaderboard-content" style="
+        max-height:260px;
+        overflow-y:auto;
+        text-align:left;
+        font-size:13px;
+        background:#020617;
+        border-radius:10px;
+        padding:8px 10px;
+        border:1px solid #38bdf8;
+      ">
+        Memuat data...
+      </div>
+      <button class="result-btn" style="margin-top:14px;background:linear-gradient(to right,#4b5563,#020617);box-shadow:0 3px 0 #020617;" onclick="closeLeaderboard()">
+        Kembali
+      </button>
+    </div>
+  </div>
+
+  <div id="result-overlay">
+    <div class="result-box">
+      <div class="result-title" id="result-title">HASIL</div>
+      <div class="result-detail" id="result-detail">Skor kamu: 0</div>
+      <button class="result-btn" onclick="returnToMenuFromResult()">Kembali ke Menu</button>
+    </div>
+  </div>
+
+  <canvas id="gameCanvas"></canvas>
+
+  
+
+
+
+<script>
+  // --- KARTU (damage sudah diturunkan lagi) ---
+  const CARDS = [
+    { id: "RO",  name: "ROBO TANK", cost: 6, emoji: "🤖", class: "card-bg-orange", troopColor: 0xf97316, damage: 26, speed: 0.025,  hp: 180 },
+    { id: "SPE", name: "SPEEDY",    cost: 3, emoji: "⚡", class: "card-bg-green",  troopColor: 0x22c55e, damage: 13, speed: 0.085,  hp: 95  },
+    { id: "ARC", name: "ARCHER",    cost: 4, emoji: "🏹", class: "card-bg-blue",   troopColor: 0x3b82f6, damage: 18, speed: 0.045,  hp: 115 },
+    { id: "MUS", name: "SUPPORT",   cost: 5, emoji: "💊", class: "card-bg-purple", troopColor: 0xa855f7, damage: 11, speed: 0.038,  hp: 135 },
+    { id: "FIR", name: "BLASTER",   cost: 4, emoji: "🔥", class: "card-bg-red",    troopColor: 0xef4444, damage: 21, speed: 0.042,  hp: 125 }
+  ];
+
+
+  // --- 80 soal (karier AI) ---
+  const QUESTIONS = [
+    {
+      q: "Peran utama seorang 'AI Engineer' di perusahaan teknologi adalah …. ",
+      a: [
+        "A. Mendesain poster promosi produk.",
+        "B. Mengembangkan dan mengimplementasikan model kecerdasan artifisial.",
+        "C. Mengurus seluruh administrasi kantor.",
+        "D. Menjadi customer service utama."
+      ],
+      c: 1
+    },
+    {
+      q: "Profesi 'Data Scientist' paling erat kaitannya dengan aktivitas …. ",
+      a: [
+        "A. Menggambar ilustrasi untuk media sosial.",
+        "B. Mengolah, menganalisis, dan memodelkan data untuk mengambil keputusan.",
+        "C. Mengantar paket logistik ke pelanggan.",
+        "D. Mengelola keuangan pribadi."
+      ],
+      c: 1
+    },
+    {
+      q: "Contoh tugas 'AI Ethics Specialist' adalah …. ",
+      a: [
+        "A. Menentukan warna tema antarmuka aplikasi.",
+        "B. Menyusun kebijakan agar model AI tidak bias dan melanggar privasi.",
+        "C. Menjaga server secara fisik di data center.",
+        "D. Menulis kode UI menggunakan CSS."
+      ],
+      c: 1
+    },
+    {
+      q: "Mengapa pelajar SMA perlu memahami dasar-dasar AI? ",
+      a: [
+        "A. Agar bisa menggantikan semua guru di sekolah.",
+        "B. Karena AI hanya dipakai di jurusan informatika.",
+        "C. Supaya siap menghadapi dunia kerja yang banyak menggunakan otomatisasi dan data.",
+        "D. Agar bisa bermain game tanpa batas."
+      ],
+      c: 2
+    },
+    {
+      q: "Profesi yang bertugas menjembatani kebutuhan bisnis dan solusi data/AI disebut …. ",
+      a: [
+        "A. Business & Data Analyst.",
+        "B. Office Boy.",
+        "C. Network Cabling Engineer.",
+        "D. Security Guard."
+      ],
+      c: 0
+    },
+    {
+      q: "Contoh penggunaan AI yang bertanggung jawab di sekolah adalah …. ",
+      a: [
+        "A. Menggunakan AI untuk mencontek saat ujian.",
+        "B. Meminta AI menyusun seluruh tugas tanpa dipahami.",
+        "C. Memakai AI untuk mendapatkan ide awal, lalu mengolahnya sendiri.",
+        "D. Membagikan data pribadi teman tanpa izin ke aplikasi AI."
+      ],
+      c: 2
+    },
+    {
+      q: "Istilah 'bias' dalam model AI merujuk pada …. ",
+      a: [
+        "A. Tampilan UI yang warna-warni.",
+        "B. Kecenderungan model memberikan hasil yang tidak adil pada kelompok tertentu.",
+        "C. Kecepatan eksekusi program yang lambat.",
+        "D. Banyaknya RAM yang digunakan."
+      ],
+      c: 1
+    },
+    {
+      q: "Profesi 'Machine Learning Engineer' biasanya fokus pada …. ",
+      a: [
+        "A. Mendesain karakter 3D untuk game.",
+        "B. Mengkonfigurasi jaringan listrik di gedung.",
+        "C. Membangun pipeline pelatihan dan deployment model ML.",
+        "D. Menulis berita di portal online."
+      ],
+      c: 2
+    },
+    {
+      q: "Contoh penerapan AI di bidang kesehatan adalah …. ",
+      a: [
+        "A. Aplikasi yang menganalisis citra rontgen untuk membantu dokter.",
+        "B. Mesin fotokopi di ruang administrasi.",
+        "C. Kalender dinding di ruang tunggu.",
+        "D. Jam digital di lobi rumah sakit."
+      ],
+      c: 0
+    },
+    {
+      q: "Apa sikap etis saat menggunakan AI generatif untuk tugas sekolah? ",
+      a: [
+        "A. Mengakui bahwa ide awal dibantu AI dan tetap menulis dengan kata-kata sendiri.",
+        "B. Menghapus nama sendiri dan menaruh nama AI.",
+        "C. Mengirim hasil apa adanya tanpa dibaca.",
+        "D. Memberikan akun AI ke orang lain tanpa izin."
+      ],
+      c: 0
+    },
+    {
+      q: "Profesi yang banyak merancang pengalaman pengguna pada produk digital disebut …. ",
+      a: [
+        "A. UX Designer.",
+        "B. AI Chip Designer.",
+        "C. Database Tuner.",
+        "D. Electrical Officer."
+      ],
+      c: 0
+    },
+    {
+      q: "Salah satu tantangan karier di bidang AI adalah …. ",
+      a: [
+        "A. Tidak pernah ada perubahan teknologi.",
+        "B. Perlu belajar terus karena teknologi AI berkembang sangat cepat.",
+        "C. Semua pekerjaan selalu sama setiap hari.",
+        "D. Tidak boleh bekerja sama dengan tim lain."
+      ],
+      c: 1
+    },
+    {
+      q: "Apa yang perlu disiapkan pelajar jika ingin menjadi Data Scientist? ",
+      a: [
+        "A. Hanya kemampuan menggambar.",
+        "B. Pemahaman matematika/statistika, pemrograman, dan logika berpikir.",
+        "C. Hanya kemampuan olahraga.",
+        "D. Hafalan lagu populer."
+      ],
+      c: 1
+    },
+    {
+      q: "Contoh penggunaan AI di bidang pendidikan adalah …. ",
+      a: [
+        "A. Sistem rekomendasi materi belajar yang menyesuaikan kemampuan siswa.",
+        "B. Mesin penjual minuman di kantin.",
+        "C. Lampu lalu lintas di jalan raya.",
+        "D. Papan tulis biasa tanpa sensor."
+      ],
+      c: 0
+    },
+    {
+      q: "Istilah 'automation' dalam konteks karier AI berarti …. ",
+      a: [
+        "A. Menghapus seluruh pekerjaan manusia.",
+        "B. Menggunakan sistem atau mesin untuk menyelesaikan tugas berulang secara otomatis.",
+        "C. Melarang komputer dipakai di kantor.",
+        "D. Mengganti semua karyawan dengan robot fisik."
+      ],
+      c: 1
+    },
+    {
+      q: "Profesi yang bertugas mengelola infrastruktur komputasi untuk pelatihan model besar (seperti GPU cluster) adalah …. ",
+      a: [
+        "A. AI Infrastructure / MLOps Engineer.",
+        "B. Library Assistant.",
+        "C. Receptionist.",
+        "D. Content Creator."
+      ],
+      c: 0
+    },
+    {
+      q: "Mengapa privasi data penting dalam pengembangan AI? ",
+      a: [
+        "A. Agar data bisa dijual bebas.",
+        "B. Untuk melindungi informasi pribadi dan mencegah penyalahgunaan.",
+        "C. Supaya model AI semakin lambat.",
+        "D. Karena AI tidak boleh belajar dari data apa pun."
+      ],
+      c: 1
+    },
+    {
+      q: "Jika sebuah model AI dilatih hanya dengan data dari satu negara, risiko yang mungkin muncul adalah …. ",
+      a: [
+        "A. Model memahami semua budaya di dunia.",
+        "B. Model menjadi sangat adil untuk semua bahasa.",
+        "C. Model berpotensi bias terhadap konteks negara lain.",
+        "D. Model otomatis menjadi lebih murah."
+      ],
+      c: 2
+    },
+    {
+      q: "Soft skill yang penting untuk karier di bidang AI adalah …. ",
+      a: [
+        "A. Hanya fisik yang kuat.",
+        "B. Kemampuan komunikasi, kerja tim, dan pemecahan masalah.",
+        "C. Hanya kemampuan menggambar manual.",
+        "D. Kemampuan menghafal tanpa memahami."
+      ],
+      c: 1
+    },
+    {
+      q: "Contoh sikap tidak etis dalam menggunakan AI generatif adalah …. ",
+      a: [
+        "A. Mengutip sumber data dan menyebutkan bantuan AI.",
+        "B. Menggunakan AI untuk mengecek ejaan sebelum mengumpulkan tugas.",
+        "C. Menyalin karya orang lain yang dihasilkan AI dan mengaku sebagai karya pribadi tanpa modifikasi.",
+        "D. Meminta AI untuk menjelaskan konsep yang sulit."
+      ],
+      c: 2
+    },
+    {
+      q: "Profesi apa yang fokus mengevaluasi dampak sosial dan kebijakan publik terkait penggunaan AI? ",
+      a: [
+        "A. AI Policy Researcher.",
+        "B. Tukang servis printer.",
+        "C. Office Assistant.",
+        "D. Kasir minimarket."
+      ],
+      c: 0
+    },
+    {
+      q: "Salah satu manfaat mempelajari AI sejak SMA adalah …. ",
+      a: [
+        "A. Bisa langsung menggantikan semua pekerjaan orang tua.",
+        "B. Memiliki literasi teknologi sehingga tidak mudah termakan hoaks berbasis AI.",
+        "C. Tidak perlu belajar mata pelajaran lain.",
+        "D. Boleh mencontek pakai AI saat ujian."
+      ],
+      c: 1
+    },
+    {
+      q: "Profesi 'Computer Vision Engineer' umumnya bekerja dengan …. ",
+      a: [
+        "A. Data suara dan musik.",
+        "B. Data citra dan video.",
+        "C. Data keuangan manual.",
+        "D. Data sensor suhu ruangan saja."
+      ],
+      c: 1
+    },
+    {
+      q: "Apa yang dimaksud dengan 'explainable AI' (XAI)? ",
+      a: [
+        "A. AI yang selalu menolak menjawab.",
+        "B. Pendekatan agar keputusan model AI dapat dijelaskan dan dipahami manusia.",
+        "C. AI yang hanya bisa digunakan di laboratorium.",
+        "D. AI yang tidak menggunakan data sama sekali."
+      ],
+      c: 1
+    },
+    {
+      q: "Jika sebuah chatbot AI digunakan sebagai asisten belajar, sikap pelajar yang benar adalah …. ",
+      a: [
+        "A. Mengandalkan chatbot untuk menjawab semua ujian.",
+        "B. Menggunakan chatbot sebagai partner diskusi dan tetap mengecek kebenaran jawaban.",
+        "C. Selalu mengirim data pribadi ke chatbot.",
+        "D. Menggunakan chatbot untuk mengejek teman."
+      ],
+      c: 1
+    }
+  ];
+
+  // --- STATE & DIFFICULTY ---
+  let state = {
+    elixir: 5,
+    maxElixir: 10,
+    hand: [0, 1, 2, 3],
+    nextCard: 4,
+    troops: [],
+    towers: [],
+    particles: [],
+    clouds: [],
+    trees: [],
+    bullets: [],
+    score: 0,
+    gameActive: false,
+    timeLeft: 120
+  };
+
+  let scene, camera, renderer, clock, controls;
+  let activeQuizCard = null;
+  let gameInitialized = false;
+
+  // --- DATA PLAYER & MODE ---
+  let playerName = '';
+  let playerClass = '';
+  let currentMode = 'Singleplayer'; // untuk nanti kalau multiplayer aktif
+
+  // URL Web App Apps Script (ganti dengan punyamu)
+  const LEADERBOARD_ENDPOINT = 'https://script.google.com/macros/s/AKfycbz-39-uFPPW8XE9WqPOEOyHvXyANhYi7gXTV4LgRgEVYKIlG9_kUhi6snVtaVshHBGWbQ/exec';
+
+
+  let uiIntervalId = null;
+  let enemyIntervalId = null;
+  let timerIntervalId = null;
+
+  let currentDifficulty = 'Sedang';
+  const difficultyConfig = {
+    Rendah: { enemySpawnInterval: 6500, enemyMaxTroops: 5, enemyDamageFactor: 0.7 },
+    Sedang: { enemySpawnInterval: 4500, enemyMaxTroops: 8, enemyDamageFactor: 1.0 },
+    Sulit:  { enemySpawnInterval: 3000, enemyMaxTroops: 11, enemyDamageFactor: 1.25 }
+  };
+
+  // flag izin audio dari user
+  let audioUnlocked = false;
+
+    // ==== AUDIO INLINE (Web Audio, tanpa file/mp3 eksternal) ====
+    let audioCtx = null;
+    let masterGain = null;
+    let bgmTimer = null;
+    let audioReady = false;
+
+    function ensureAudio() {
+      if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        masterGain = audioCtx.createGain();
+        masterGain.gain.value = 0.4; // volume global
+        masterGain.connect(audioCtx.destination);
+      }
+      if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+      audioReady = true;
+    }
+
+    function stopBgmPattern() {
+      if (bgmTimer) {
+        clearInterval(bgmTimer);
+        bgmTimer = null;
+      }
+    }
+
+ function startBgmPattern(type) {
+  if (!audioReady) return;
+  stopBgmPattern();
+
+  let notes, tempo, wave, vol;
+
+  if (type === 'menu') {
+    // Menu: chill tapi tetap fun
+    notes = [
+      261.63, 329.63, 392.0, 329.63,
+      293.66, 329.63, 392.0, 440.0
+    ];
+    tempo = 380;      // sedikit lebih cepat
+    wave  = 'square';
+    vol   = 0.28;
+  } else {
+    // In-game: lebih agresif / energik
+    notes = [
+      196.0, 220.0, 246.94, 293.66,
+      246.94, 220.0, 196.0, 174.61
+    ];
+    tempo = 260;      // beat lebih rapat
+    wave  = 'sawtooth';
+    vol   = 0.32;
+  }
+
+  let index = 0;
+  bgmTimer = setInterval(() => {
+    if (!audioCtx) return;
+    const now = audioCtx.currentTime;
+    const freq = notes[index % notes.length];
+    index++;
+
+    // Nada utama
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+
+    osc.type = wave;
+    osc.frequency.setValueAtTime(freq, now);
+
+    gain.gain.setValueAtTime(0.0, now);
+    gain.gain.linearRampToValueAtTime(vol, now + 0.03);
+    gain.gain.exponentialRampToValueAtTime(0.0008, now + 0.45);
+
+    osc.connect(gain);
+    gain.connect(masterGain);
+
+    osc.start(now);
+    osc.stop(now + 0.5);
+
+    // Beat sederhana (kick) tiap 2 ketukan
+    if (index % 2 === 0) {
+      const kickOsc = audioCtx.createOscillator();
+      const kickGain = audioCtx.createGain();
+      kickOsc.type = 'sine';
+      kickOsc.frequency.setValueAtTime(130, now);
+      kickOsc.frequency.exponentialRampToValueAtTime(60, now + 0.18);
+
+      kickGain.gain.setValueAtTime(0.9, now);
+      kickGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.18);
+
+      kickOsc.connect(kickGain);
+      kickGain.connect(masterGain);
+
+      kickOsc.start(now);
+      kickOsc.stop(now + 0.2);
+    }
+  }, tempo);
+}
+
+function stopAllBgm() {
+  stopBgmPattern();
+}
+
+function playBgmLoginMenu() {
+  startBgmPattern('menu');
+}
+
+function playBgmGame() {
+  startBgmPattern('game');
+}
+
+
+    // --- SFX Kartun (beep/boop lucu) ---
+    function oneShotBeep(freqStart, freqEnd, duration, vol, type = 'triangle') {
+      if (!audioReady) return;
+      const now = audioCtx.currentTime;
+
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+
+      osc.type = type;
+      osc.frequency.setValueAtTime(freqStart, now);
+      osc.frequency.linearRampToValueAtTime(freqEnd, now + duration);
+
+      gain.gain.setValueAtTime(vol, now);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+
+      osc.connect(gain);
+      gain.connect(masterGain);
+
+      osc.start(now);
+      osc.stop(now + duration + 0.02);
+    }
+
+    function playSfxWin() {
+      // naik (win) – kartun
+      oneShotBeep(880, 1760, 0.35, 0.6, 'square');
+    }
+
+    function playSfxTowerDown() {
+      if (!audioReady) return;
+      const now = audioCtx.currentTime;
+
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(220, now);
+      osc.frequency.exponentialRampToValueAtTime(80, now + 0.5);
+
+      gain.gain.setValueAtTime(0.7, now);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.5);
+
+      osc.connect(gain);
+      gain.connect(masterGain);
+
+      osc.start(now);
+      osc.stop(now + 0.55);
+    }
+
+
+    function playSfxLose() {
+      // turun (lose)
+      oneShotBeep(330, 110, 0.45, 0.45, 'sawtooth');
+    }
+
+    function playSfxSpawn() {
+      if (!audioReady) return;
+      const now = audioCtx.currentTime;
+
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+
+      osc.type = 'square';
+      osc.frequency.setValueAtTime(700, now);
+      osc.frequency.linearRampToValueAtTime(1000, now + 0.12);
+
+      gain.gain.setValueAtTime(0.4, now);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.18);
+
+      osc.connect(gain);
+      gain.connect(masterGain);
+
+      osc.start(now);
+      osc.stop(now + 0.22);
+    }
+
+    function playSfxHit() {
+      // "pop" cepat
+      oneShotBeep(650, 420, 0.12, 0.35, 'triangle');
+    }
+
+    function playSfxQuizGood() {
+      // "ting" naik
+      oneShotBeep(900, 1350, 0.2, 0.4, 'triangle');
+    }
+
+    function playSfxQuizBad() {
+      // "blup" turun
+      oneShotBeep(260, 200, 0.16, 0.35, 'sine');
+    }
+
+
+    // BUTTON "NYALAKAN MUSIK"
+    function triggerLoginSound() {
+      audioUnlocked = true;
+      ensureAudio();   // inisialisasi Web Audio
+      stopAllBgm();
+      playBgmLoginMenu();
+    }
+
+
+  // --- LOGIN & MENU FLOW ---
+    function handleLogin() {
+    const name  = document.getElementById('p-name').value.trim();
+    const kelas = document.getElementById('p-class').value.trim();
+
+    if (!name) {
+      alert("Isi nama dulu ya.");
+      return;
+    }
+
+    playerName  = name;
+    playerClass = kelas || '-';
+
+    // default mode: singleplayer
+    currentMode = 'Singleplayer';
+
+    // Masuk ke menu
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('menu-screen').style.display = 'flex';
+
+    // Paksa unlock audio karena ini juga event klik user
+    audioUnlocked = true;
+    ensureAudio();
+    stopAllBgm();
+    playBgmLoginMenu();
+  }
+
+
+
+  function openDifficultySelect() {
+    document.getElementById('difficulty-overlay').style.display = 'flex';
+  }
+  function closeDifficultySelect() {
+    document.getElementById('difficulty-overlay').style.display = 'none';
+  }
+
+  function exitGameApp() {
+    stopAllBgm();
+    alert("Terima kasih sudah mencoba AI Career Tower Battle! 🙌");
+    document.getElementById('menu-screen').style.display = 'none';
+    document.getElementById('login-screen').style.display = 'flex';
+  }
+
+    function startSingleplayer(diff) {
+    currentDifficulty = diff || 'Sedang';
+    currentMode = 'Singleplayer'; // set mode
+
+    closeDifficultySelect();
+    document.getElementById('menu-screen').style.display = 'none';
+    document.getElementById('ui-layer').style.display   = 'flex';
+    document.getElementById('quiz-overlay').style.display   = 'none';
+    document.getElementById('result-overlay').style.display = 'none';
+
+    playBgmGame();
+    startMatch();
+  }
+
+  function exitToMenu() {
+    state.gameActive = false;
+    document.getElementById('ui-layer').style.display       = 'none';
+    document.getElementById('quiz-overlay').style.display   = 'none';
+    document.getElementById('result-overlay').style.display = 'none';
+    document.getElementById('menu-screen').style.display    = 'flex';
+    if (audioUnlocked) playBgmLoginMenu();
+  }
+
+  function returnToMenuFromResult() {
+    document.getElementById('result-overlay').style.display = 'none';
+    document.getElementById('ui-layer').style.display       = 'none';
+    document.getElementById('menu-screen').style.display    = 'flex';
+    state.gameActive = false;
+    if (audioUnlocked) playBgmLoginMenu();
+  }
+
+    // --- LEADERBOARD: KIRIM SKOR KE GOOGLE SHEETS ---
+  function submitScoreToLeaderboard() {
+    if (!LEADERBOARD_ENDPOINT || LEADERBOARD_ENDPOINT === 'PASTE_WEB_APP_URL_DI_SINI') {
+      console.warn('LEADERBOARD_ENDPOINT belum diisi.');
+      return;
+    }
+    if (!playerName) {
+      console.warn('Nama pemain kosong, tidak mengirim skor.');
+      return;
+    }
+
+    const payload = {
+      name:       playerName,
+      kelas:      playerClass,
+      mode:       currentMode,
+      difficulty: currentDifficulty,
+      score:      state.score
+    };
+
+    // tidak perlu nunggu hasil; no-cors supaya tidak error CORS
+    fetch(LEADERBOARD_ENDPOINT, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(payload)
+    }).catch(err => {
+      console.error('Gagal kirim skor:', err);
+    });
+  }
+
+// --- LEADERBOARD: TAMPILKAN DATA DARI GOOGLE SHEETS ---
+async function openLeaderboard() {
+  const overlay = document.getElementById('leaderboard-overlay');
+  const box     = document.getElementById('leaderboard-content');
+
+  overlay.style.display = 'flex';
+  box.innerHTML = 'Memuat data dari spreadsheet...';
+
+  if (!LEADERBOARD_ENDPOINT || LEADERBOARD_ENDPOINT === 'PASTE_WEB_APP_URL_DI_SINI') {
+    box.innerHTML = '<p>LEADERBOARD_ENDPOINT belum diisi. Set dulu URL Web App Apps Script.</p>';
+    return;
+  }
+
+  try {
+    const res = await fetch(LEADERBOARD_ENDPOINT);
+
+    if (!res.ok) {
+      // misal 403/404
+      box.innerHTML = `<p>HTTP error: ${res.status}. Cek akses Web App.</p>`;
+      return;
+    }
+
+    const data = await res.json();   // harus JSON dari doGet
+
+    // kalau server balas {status:"error",message:"..."}
+    if (!Array.isArray(data)) {
+      if (data && data.status === 'error') {
+        box.innerHTML = `<p>Server error: ${data.message}</p>`;
+      } else {
+        box.innerHTML = '<p>Respons bukan array data leaderboard.</p>';
+      }
+      return;
+    }
+
+    if (data.length === 0) {
+      box.innerHTML = '<p>Belum ada data skor.</p>';
+      return;
+    }
+
+    let html = `
+      <table style="width:100%;border-collapse:collapse;font-size:12px;">
+        <thead>
+          <tr>
+            <th style="border-bottom:1px solid #4b5563;padding:4px;text-align:left;">#</th>
+            <th style="border-bottom:1px solid #4b5563;padding:4px;text-align:left;">Nama</th>
+            <th style="border-bottom:1px solid #4b5563;padding:4px;text-align:left;">Kelas</th>
+            <th style="border-bottom:1px solid #4b5563;padding:4px;text-align:left;">Mode</th>
+            <th style="border-bottom:1px solid #4b5563;padding:4px;text-align:left;">Kesulitan</th>
+            <th style="border-bottom:1px solid #4b5563;padding:4px;text-align:right;">Skor</th>
+          </tr>
+        </thead>
+        <tbody>
+    `;
+
+    data.forEach((row, idx) => {
+      html += `
+        <tr>
+          <td style="padding:3px 4px;">${idx + 1}</td>
+          <td style="padding:3px 4px;">${row.name || '-'}</td>
+          <td style="padding:3px 4px;">${row.kelas || '-'}</td>
+          <td style="padding:3px 4px;">${row.mode || '-'}</td>
+          <td style="padding:3px 4px;">${row.difficulty || '-'}</td>
+          <td style="padding:3px 4px;text-align:right;">${row.score || 0}</td>
+        </tr>
+      `;
+    });
+
+    html += '</tbody></table>';
+    box.innerHTML = html;
+
+  } catch (err) {
+    console.error('Leaderboard error:', err);
+    box.innerHTML = '<p>Gagal memuat leaderboard. Cek Apps Script / izin akses Web App.</p>';
+  }
+}
+
+
+  function closeLeaderboard() {
+    document.getElementById('leaderboard-overlay').style.display = 'none';
+  }
+
+
+
+  // --- MATCH RESET ---
+  function resetStateCore() {
+    state.elixir = 5;
+    state.maxElixir = 10;
+    state.hand = [0,1,2,3];
+    state.nextCard = 4;
+    state.troops.forEach(t => { if (t.mesh) scene.remove(t.mesh); });
+    state.troops = [];
+    state.bullets.forEach(b => { if (b.mesh) scene.remove(b.mesh); });
+    state.bullets = [];
+    state.score = 0;
+    state.gameActive = true;
+    state.timeLeft = 120;
+
+    state.towers.forEach(t => {
+      const d = t.userData;
+      if (!d) return;
+      const maxHp = d.isKing ? 400 : 250;
+      d.maxHp = maxHp;
+      d.hp = maxHp;
+      d.hitTimer = 0;
+      d.rubble = false;
+      if (d.hpFill) {
+        d.hpFill.scale.x = 1;
+        d.hpFill.position.x = 0;
+      }
+      if (d.hpGroup) d.hpGroup.visible = true;
+      if (d.flag) d.flag.visible = true;
+      t.visible = true;
+    });
+
+    document.getElementById('game-score').innerText = "0";
+    document.getElementById('game-timer').innerText = "02:00";
+    document.getElementById('hp-global-player').style.width = "100%";
+    document.getElementById('hp-global-enemy').style.width  = "100%";
+  }
+
+  function startMatch() {
+    if (!gameInitialized) {
+      initThreeJS();
+      animate();
+      gameInitialized = true;
+    }
+
+    resetStateCore();
+    renderHand();
+    updateElixirUI();
+    updateCardStates();
+    updateGlobalHpBars();
+
+    const diff = difficultyConfig[currentDifficulty] || difficultyConfig.Sedang;
+
+    if (uiIntervalId) clearInterval(uiIntervalId);
+    uiIntervalId = setInterval(() => {
+      if (state.gameActive) {
+        updateElixirUI();
+        updateCardStates();
+        updateGlobalHpBars();
+      }
+    }, 400);
+
+    if (enemyIntervalId) clearInterval(enemyIntervalId);
+    enemyIntervalId = setInterval(() => {
+      if (!state.gameActive) return;
+      spawnEnemyWave(diff);
+    }, diff.enemySpawnInterval);
+
+    if (timerIntervalId) clearInterval(timerIntervalId);
+    timerIntervalId = setInterval(() => {
+      if (!state.gameActive) return;
+      state.timeLeft--;
+      if (state.timeLeft < 0) state.timeLeft = 0;
+      const m = String(Math.floor(state.timeLeft / 60)).padStart(2,'0');
+      const s = String(state.timeLeft % 60).padStart(2,'0');
+      document.getElementById('game-timer').innerText = `${m}:${s}`;
+      if (state.timeLeft <= 0) {
+        let playerKing = state.towers.find(t => t.userData && t.userData.isPlayer && t.userData.isKing);
+        let enemyKing  = state.towers.find(t => t.userData && !t.userData.isPlayer && t.userData.isKing);
+        const playerHp = playerKing ? playerKing.userData.hp : 0;
+        const enemyHp  = enemyKing ? enemyKing.userData.hp : 0;
+        if (playerHp <= 0 && enemyHp <= 0) {
+          endGame(false);
+        } else if (enemyHp <= 0 || playerHp > enemyHp) {
+          endGame(true);
+        } else {
+          endGame(false);
+        }
+      }
+    }, 1000);
+  }
+
+  // --- THREE.JS SCENE ---
+  function initThreeJS() {
+    const canvas = document.getElementById('gameCanvas');
+    renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.shadowMap.enabled = true;
+
+    scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x87ceeb);
+    scene.fog = new THREE.Fog(0x87ceeb, 40, 120);
+
+    camera = new THREE.PerspectiveCamera(
+      45,
+      window.innerWidth / window.innerHeight,
+      0.1,
+      200
+    );
+    camera.position.set(0, 24, 32);
+    camera.lookAt(0, 0, 0);
+
+    clock = new THREE.Clock();
+
+    controls = new THREE.OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.08;
+    controls.enablePan = false;
+    controls.minDistance = 18;
+    controls.maxDistance = 60;
+    controls.minPolarAngle = Math.PI / 5;
+    controls.maxPolarAngle = Math.PI / 2.2;
+    controls.target.set(0, 0, 0);
+    controls.update();
+
+    const hemiLight = new THREE.HemisphereLight(0xffffff, 0xb9fbc0, 0.9);
+    scene.add(hemiLight);
+    const dirLight = new THREE.DirectionalLight(0xffffff, 0.9);
+    dirLight.position.set(20, 40, 10);
+    dirLight.castShadow = true;
+    dirLight.shadow.mapSize.width = 2048;
+    dirLight.shadow.mapSize.height = 2048;
+    scene.add(dirLight);
+
+    const floorGeo = new THREE.PlaneGeometry(30, 44);
+    const floorMat = new THREE.MeshStandardMaterial({ color: 0x65c76d, roughness: 0.8 });
+    const floor = new THREE.Mesh(floorGeo, floorMat);
+    floor.rotation.x = -Math.PI / 2;
+    floor.receiveShadow = true;
+    scene.add(floor);
+
+    const riverGeo = new THREE.PlaneGeometry(30, 3);
+    const riverMat = new THREE.MeshStandardMaterial({
+      color: 0x38bdf8,
+      emissive: 0x0ea5e9,
+      emissiveIntensity: 0.4
+    });
+    const river = new THREE.Mesh(riverGeo, riverMat);
+    river.rotation.x = -Math.PI / 2;
+    river.position.y = 0.01;
+    scene.add(river);
+
+    const bridgeGeo = new THREE.BoxGeometry(3, 0.25, 4);
+    const bridgeMat = new THREE.MeshStandardMaterial({ color: 0xe5e7eb });
+    const b1 = new THREE.Mesh(bridgeGeo, bridgeMat); b1.position.set(-6, 0.2, 0); b1.castShadow = true; scene.add(b1);
+    const b2 = new THREE.Mesh(bridgeGeo, bridgeMat); b2.position.set( 6, 0.2, 0); b2.castShadow = true; scene.add(b2);
+
+    createWalls();
+    createStands(-16, 0);
+    createStands(16, 0);
+
+    createTower(0, 11, true,  true);
+    createTower(-7, 7, true,  false);
+    createTower( 7, 7, true,  false);
+    createTower(0, -11, false, true);
+    createTower(-7, -7, false, false);
+    createTower( 7, -7, false, false);
+
+    createClouds();
+    createNature();
+  }
+
+  function createWalls() {
+    const wallMat = new THREE.MeshStandardMaterial({ color: 0x15803d });
+    for(let i=-14; i<=14; i+=2) {
+      const brick = new THREE.Mesh(new THREE.BoxGeometry(2, 1.2, 1), wallMat);
+      brick.position.set(i, 0.6, 21);
+      brick.castShadow = true;
+      brick.receiveShadow = true;
+      scene.add(brick);
+      
+      const brick2 = new THREE.Mesh(new THREE.BoxGeometry(2, 1.2, 1), wallMat);
+      brick2.position.set(i, 0.6, -21);
+      brick2.castShadow = true;
+      brick2.receiveShadow = true;
+      scene.add(brick2);
+    }
+  }
+
+  function createStands(x, z) {
+    const standGroup = new THREE.Group();
+    const mat = new THREE.MeshStandardMaterial({ color: 0x166534 });
+    
+    const step1 = new THREE.Mesh(new THREE.BoxGeometry(4, 1, 30), mat);
+    step1.position.set(0, 0.5, 0);
+    step1.receiveShadow = true;
+    standGroup.add(step1);
+    
+    const colors = [0xfacc15, 0xf97316, 0x38bdf8, 0x22c55e];
+
+    for(let i=0; i<26; i++) {
+      const fan = new THREE.Group();
+
+      const bodyMat = new THREE.MeshStandardMaterial({ color: colors[Math.floor(Math.random()*colors.length)] });
+      const body = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.8, 0.4), bodyMat);
+      body.position.y = 0.4;
+      fan.add(body);
+
+      const head = new THREE.Mesh(new THREE.SphereGeometry(0.22, 12, 12), new THREE.MeshStandardMaterial({ color: 0xffe4c7 }));
+      head.position.y = 0.95;
+      fan.add(head);
+
+      const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 0.8, 8), new THREE.MeshStandardMaterial({ color: 0xffffff }));
+      pole.position.set(0.25, 0.9, 0);
+      fan.add(pole);
+
+      const flagGeo = new THREE.PlaneGeometry(0.6, 0.35);
+      const flagColor = Math.random() > 0.5 ? 0xf97316 : 0x3b82f6;
+      const flagMat = new THREE.MeshStandardMaterial({ color: flagColor, side: THREE.DoubleSide });
+      const flag = new THREE.Mesh(flagGeo, flagMat);
+      flag.position.set(0.25, 1.1, 0);
+      fan.add(flag);
+
+      fan.position.set((Math.random()-0.5)*3, 0, (Math.random()-0.5)*28);
+      fan.userData = {
+        jumpOffset: Math.random() * 100,
+        jumpSpeed: 0.16 + Math.random()*0.1,
+        flag
+      };
+
+      standGroup.add(fan);
+      state.particles.push(fan);
+    }
+
+    standGroup.position.set(x, 0, z);
+    scene.add(standGroup);
+  }
+
+  function createTower(x, z, isPlayer, isKing) {
+    const group = new THREE.Group();
+    const height = isKing ? 4.3 : 3.2;
+    const radius = isKing ? 1.6 : 1.1;
+    const teamColor = isPlayer ? 0x1d4ed8 : 0xef4444; 
+    
+    const baseGeo = new THREE.CylinderGeometry(radius+0.4, radius+0.6, 0.6, 10);
+    const baseMat = new THREE.MeshStandardMaterial({ color: 0x94a3b8, roughness: 0.9 });
+    const base = new THREE.Mesh(baseGeo, baseMat);
+    base.position.y = 0.3;
+    base.castShadow = true;
+    base.receiveShadow = true;
+    group.add(base);
+
+    const towerGeo = new THREE.CylinderGeometry(radius, radius, height, 12);
+    const towerMat = new THREE.MeshStandardMaterial({
+      color: 0xe5e7eb,
+      roughness: 0.8,
+      metalness: 0.1
+    });
+    const tower = new THREE.Mesh(towerGeo, towerMat);
+    tower.position.y = height/2 + 0.6;
+    tower.castShadow = true;
+    tower.receiveShadow = true;
+    group.add(tower);
+
+    const battlementGeo = new THREE.BoxGeometry(radius*2.4, 0.6, radius*2.4);
+    const battlementMat = new THREE.MeshStandardMaterial({ color: 0xcbd5f5 });
+    const battlement = new THREE.Mesh(battlementGeo, battlementMat);
+    battlement.position.y = height + 1;
+    battlement.castShadow = true;
+    battlement.receiveShadow = true;
+    group.add(battlement);
+
+    const topGeo = new THREE.ConeGeometry(radius+0.4, 1.6, 10);
+    const topMat = new THREE.MeshStandardMaterial({
+      color: teamColor,
+      emissive: teamColor,
+      emissiveIntensity: isKing ? 0.4 : 0.2
+    });
+    const top = new THREE.Mesh(topGeo, topMat);
+    top.position.y = height + 2;
+    top.castShadow = true;
+    top.receiveShadow = true;
+    group.add(top);
+
+    const windFlagGeo = new THREE.PlaneGeometry(0.9, 0.45);
+    const windFlagMat = new THREE.MeshStandardMaterial({
+      color: teamColor,
+      side: THREE.DoubleSide
+    });
+    const windFlag = new THREE.Mesh(windFlagGeo, windFlagMat);
+    windFlag.position.set(0, height + 2.5, radius+0.2);
+    group.add(windFlag);
+
+    const windowGeo = new THREE.BoxGeometry(0.4, 0.7, 0.05);
+    const windowMat = new THREE.MeshStandardMaterial({
+      color: 0xfacc15,
+      emissive: 0xfacc15,
+      emissiveIntensity: 0.5
+    });
+    const win1 = new THREE.Mesh(windowGeo, windowMat);
+    win1.position.set(0, height/2 + 0.8, radius+0.01);
+    const win2 = win1.clone(); win2.position.set(radius+0.01, height/2 + 0.8, 0); win2.rotation.y = Math.PI/2;
+    group.add(win1, win2);
+
+    const hpBackColor = isPlayer ? 0x166534 : 0x7f1d1d;
+    const hpFrontColor = isPlayer ? 0x22c55e : 0xf97373;
+
+    const hpGroup = new THREE.Group();
+    const hpBgGeo = new THREE.PlaneGeometry(2.8, 0.36);
+    const hpBgMat = new THREE.MeshBasicMaterial({ color: hpBackColor, side: THREE.DoubleSide });
+    const hpBg = new THREE.Mesh(hpBgGeo, hpBgMat);
+    hpGroup.add(hpBg);
+
+    const hpFillGeo = new THREE.PlaneGeometry(2.6, 0.22);
+    const hpFillMat = new THREE.MeshBasicMaterial({ color: hpFrontColor, side: THREE.DoubleSide });
+    const hpFill = new THREE.Mesh(hpFillGeo, hpFillMat);
+    hpFill.position.z = 0.01;
+    hpGroup.add(hpFill);
+
+    hpGroup.position.set(x, height + 3, z);
+    scene.add(hpGroup);
+
+    group.position.set(x, 0, z);
+    scene.add(group);
+
+    const maxHp = isKing ? 400 : 250;
+
+    group.userData = {
+      isPlayer,
+      isKing,
+      top,
+      windows: [win1, win2],
+      flag: windFlag,
+      wobbleOffset: Math.random() * 10,
+      hpGroup,
+      hpFill,
+      hpWidth: 2.6,
+      hp: maxHp,
+      maxHp,
+      hitTimer: 0,
+      rubble: false,
+      // sekarang kedua tower tengah (player & musuh) bisa menembak
+      cannonCooldown: isKing ? 0 : null
+    };
+
+
+    state.towers.push(group);
+  }
+
+  function createClouds() {
+    const cloudMaterial = new THREE.MeshStandardMaterial({
+      color: 0xffffff,
+      roughness: 0.8,
+      metalness: 0
+    });
+
+    for (let i = 0; i < 12; i++) {
+      const cloudGroup = new THREE.Group();
+      const parts = 3 + Math.floor(Math.random() * 3);
+      for (let j = 0; j < parts; j++) {
+        const radius = 1 + Math.random() * 0.8;
+        const geo = new THREE.SphereGeometry(radius, 16, 16);
+        const mesh = new THREE.Mesh(geo, cloudMaterial);
+        mesh.position.set(
+          (Math.random() - 0.5) * 4,
+          (Math.random() - 0.5) * 0.8,
+          (Math.random() - 0.5) * 2
+        );
+        mesh.castShadow = true;
+        cloudGroup.add(mesh);
+      }
+
+      cloudGroup.position.set(
+        -30 + Math.random() * 60,
+        14 + Math.random() * 3,
+        -15 + Math.random() * 30
+      );
+      cloudGroup.userData.speed = 0.02 + Math.random() * 0.03;
+      scene.add(cloudGroup);
+      state.clouds.push(cloudGroup);
+    }
+  }
+
+  function createNature() {
+    const trunkMat = new THREE.MeshStandardMaterial({ color: 0x8b5a2b });
+    const leafMat  = new THREE.MeshStandardMaterial({ color: 0x15803d });
+    const bushMat  = new THREE.MeshStandardMaterial({ color: 0x16a34a });
+
+    for(let i=0;i<16;i++){
+      const isBig = Math.random() > 0.5;
+      const trunkHeight = isBig ? 2.2 : 1.4;
+      const trunkRadius = isBig ? 0.25 : 0.18;
+
+      const tree = new THREE.Group();
+
+      const trunk = new THREE.Mesh(
+        new THREE.CylinderGeometry(trunkRadius, trunkRadius, trunkHeight, 8),
+        trunkMat
+      );
+      trunk.position.y = trunkHeight/2;
+      trunk.castShadow = true;
+      trunk.receiveShadow = true;
+      tree.add(trunk);
+
+      const leavesGeo = isBig
+        ? new THREE.ConeGeometry(trunkRadius*3, trunkHeight*1.1, 10)
+        : new THREE.SphereGeometry(trunkRadius*2.2, 12, 12);
+      const leaves = new THREE.Mesh(leavesGeo, leafMat);
+      leaves.position.y = trunkHeight + (isBig ? trunkHeight*0.5 : 0.1);
+      leaves.castShadow = true;
+      leaves.receiveShadow = true;
+      tree.add(leaves);
+
+      const edge = Math.random() > 0.5 ? 1 : -1;
+      const alongZ = -18 + Math.random()*36;
+      const alongX = edge * (15 + Math.random()*2);
+      tree.position.set(alongX, 0, alongZ);
+      scene.add(tree);
+      state.trees.push(tree);
+    }
+
+    for(let i=0;i<20;i++){
+      const bush = new THREE.Mesh(
+        new THREE.SphereGeometry(0.45 + Math.random()*0.25, 12, 12),
+        bushMat
+      );
+      const ring = 13 + Math.random()*2;
+      const angle = Math.random()*Math.PI*2;
+      const x = Math.cos(angle)*ring;
+      const z = Math.sin(angle)*ring;
+      bush.position.set(x, 0.3, z);
+      bush.castShadow = true;
+      bush.receiveShadow = true;
+      scene.add(bush);
+      state.trees.push(bush);
+    }
+
+    for(let i=0;i<10;i++){
+      const tallTree = new THREE.Group();
+      const trunk = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.3, 0.3, 3.2, 8),
+        trunkMat
+      );
+      trunk.position.y = 1.6;
+      tallTree.add(trunk);
+
+      const leaves = new THREE.Mesh(
+        new THREE.ConeGeometry(1.4, 3, 12),
+        new THREE.MeshStandardMaterial({ color: 0x166534 })
+      );
+      leaves.position.y = 3.8;
+      tallTree.add(leaves);
+
+      const angle = Math.random() * Math.PI * 2;
+      const r = 16 + Math.random() * 2;
+      tallTree.position.set(Math.cos(angle)*r, 0, Math.sin(angle)*r);
+
+      tallTree.castShadow = true;
+      tallTree.receiveShadow = true;
+      scene.add(tallTree);
+      state.trees.push(tallTree);
+    }
+  }
+
+  // --- HEALTHBAR KARAKTER ---
+  function createTroopHealthbar(isPlayer) {
+    const group = new THREE.Group();
+
+    const bgGeo = new THREE.PlaneGeometry(0.9, 0.18);
+    const bgMat = new THREE.MeshBasicMaterial({
+      color: isPlayer ? 0x166534 : 0x7f1d1d,
+      side: THREE.DoubleSide
+    });
+    const bg = new THREE.Mesh(bgGeo, bgMat);
+    group.add(bg);
+
+    const fillGeo = new THREE.PlaneGeometry(0.8, 0.12);
+    const fillMat = new THREE.MeshBasicMaterial({
+      color: isPlayer ? 0x22c55e : 0xf97373,
+      side: THREE.DoubleSide
+    });
+    const fill = new THREE.Mesh(fillGeo, fillMat);
+    fill.position.z = 0.01;
+    group.add(fill);
+
+    group.renderOrder = 10; 
+    return { group, fill, width: 0.8 };
+  }
+
+  function updateTroopHpBar(troop) {
+    if (!troop || !troop.hpGroup || !troop.hpFill || !troop.mesh) return;
+    const ratio = Math.max(0, troop.hp / troop.maxHp);
+    troop.hpFill.scale.x = ratio;
+    troop.hpFill.position.x = -(troop.hpWidth * (1 - ratio) / 2);
+
+    const pos = troop.mesh.position;
+    troop.hpGroup.position.set(pos.x, pos.y + 1.45, pos.z);
+    troop.hpGroup.lookAt(camera.position);
+  }
+
+  function cardCostFromId(id) {
+    const c = CARDS.find(k => k.id === id);
+    return c ? c.cost : 4;
+  }
+
+  // --- TROOPS ---
+  function spawnUnit(cardData, isPlayer = true, damageMultiplier = 1) {
+    let mesh = new THREE.Group();
+    const skinMat = new THREE.MeshStandardMaterial({ color: 0xffe4c7 });
+
+    if (cardData.id === "RO") {
+      const base = new THREE.Mesh(
+        new THREE.BoxGeometry(1.6, 0.4, 1.2),
+        new THREE.MeshStandardMaterial({
+          color: 0x111827,
+          metalness: 0.5,
+          roughness: 0.4
+        })
+      );
+      base.position.y = 0.2;
+      mesh.add(base);
+
+      const body = new THREE.Mesh(
+        new THREE.BoxGeometry(1.1, 0.7, 0.9),
+        new THREE.MeshStandardMaterial({
+          color: cardData.troopColor,
+          metalness: 0.4,
+          roughness: 0.4
+        })
+      );
+      body.position.y = 0.75;
+      mesh.add(body);
+
+      const turret = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.18, 0.18, 0.9, 10),
+        new THREE.MeshStandardMaterial({ color: 0x0f172a, metalness: 0.6 })
+      );
+      turret.rotation.z = Math.PI / 2;
+      turret.position.set(0.35, 0.95, 0);
+      mesh.add(turret);
+
+      const visor = new THREE.Mesh(
+        new THREE.BoxGeometry(0.55, 0.25, 0.05),
+        new THREE.MeshStandardMaterial({
+          color: 0x38bdf8,
+          emissive: 0x38bdf8,
+          emissiveIntensity: 0.8
+        })
+      );
+      visor.position.set(0, 0.95, 0.47);
+      mesh.add(visor);
+    } else if (cardData.id === "SPE") {
+      const legMat = new THREE.MeshStandardMaterial({ color: 0x0f172a });
+      const leftLeg = new THREE.Mesh(
+        new THREE.BoxGeometry(0.15, 0.5, 0.2),
+        legMat
+      );
+      leftLeg.position.set(-0.12, 0.25, 0);
+      const rightLeg = leftLeg.clone();
+      rightLeg.position.x = 0.12;
+      mesh.add(leftLeg, rightLeg);
+
+      const body = new THREE.Mesh(
+        new THREE.BoxGeometry(0.45, 0.7, 0.35),
+        new THREE.MeshStandardMaterial({ color: cardData.troopColor })
+      );
+      body.position.y = 0.8;
+      mesh.add(body);
+
+      const head = new THREE.Mesh(
+        new THREE.SphereGeometry(0.22, 12, 12),
+        skinMat
+      );
+      head.position.y = 1.25;
+      mesh.add(head);
+
+      const mask = new THREE.Mesh(
+        new THREE.BoxGeometry(0.46, 0.22, 0.26),
+        new THREE.MeshStandardMaterial({ color: 0x0f172a })
+      );
+      mask.position.y = 1.23;
+      mesh.add(mask);
+
+      const band = new THREE.Mesh(
+        new THREE.TorusGeometry(0.26, 0.04, 8, 16),
+        new THREE.MeshStandardMaterial({ color: 0xfacc15 })
+      );
+      band.rotation.x = Math.PI / 2;
+      band.position.y = 1.28;
+      mesh.add(band);
+    } else if (cardData.id === "ARC") {
+      const skirt = new THREE.Mesh(
+        new THREE.ConeGeometry(0.45, 0.7, 8),
+        new THREE.MeshStandardMaterial({ color: 0x166534 })
+      );
+      skirt.position.y = 0.5;
+      mesh.add(skirt);
+
+      const body = new THREE.Mesh(
+        new THREE.BoxGeometry(0.5, 0.7, 0.35),
+        new THREE.MeshStandardMaterial({ color: cardData.troopColor })
+      );
+      body.position.y = 1.0;
+      mesh.add(body);
+
+      const head = new THREE.Mesh(
+        new THREE.SphereGeometry(0.24, 12, 12),
+        skinMat
+      );
+      head.position.y = 1.5;
+      mesh.add(head);
+
+      const hood = new THREE.Mesh(
+        new THREE.SphereGeometry(0.3, 12, 12, 0, Math.PI*2, 0, Math.PI/1.2),
+        new THREE.MeshStandardMaterial({ color: 0x0f172a })
+      );
+      hood.position.y = 1.5;
+      mesh.add(hood);
+
+      const bow = new THREE.Mesh(
+        new THREE.TorusGeometry(0.4, 0.04, 8, 16, Math.PI),
+        new THREE.MeshStandardMaterial({ color: 0xfacc15 })
+      );
+      bow.position.set(0.35, 1.05, 0);
+      mesh.add(bow);
+    } else if (cardData.id === "MUS") {
+      const base = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.22, 0.22, 0.4, 10),
+        new THREE.MeshStandardMaterial({ color: 0x0f172a })
+      );
+      base.position.y = 0.2;
+      mesh.add(base);
+
+      const orb = new THREE.Mesh(
+        new THREE.SphereGeometry(0.55, 18, 18),
+        new THREE.MeshStandardMaterial({
+          color: cardData.troopColor,
+          emissive: cardData.troopColor,
+          emissiveIntensity: 0.6,
+          transparent: true,
+          opacity: 0.9
+        })
+      );
+      orb.position.y = 0.95;
+      mesh.add(orb);
+
+      const cross = new THREE.Mesh(
+        new THREE.BoxGeometry(0.18, 0.5, 0.06),
+        new THREE.MeshStandardMaterial({ color: 0xffffff })
+      );
+      const cross2 = cross.clone();
+      cross2.rotation.z = Math.PI/2;
+      const crossGroup = new THREE.Group();
+      crossGroup.add(cross, cross2);
+      crossGroup.position.set(0, 0.95, 0.45);
+      mesh.add(crossGroup);
+    } else if (cardData.id === "FIR") {
+      const robe = new THREE.Mesh(
+        new THREE.ConeGeometry(0.6, 1.2, 8),
+        new THREE.MeshStandardMaterial({ color: 0x7f1d1d })
+      );
+      robe.position.y = 0.6;
+      mesh.add(robe);
+
+      const body = new THREE.Mesh(
+        new THREE.BoxGeometry(0.5, 0.5, 0.4),
+        new THREE.MeshStandardMaterial({
+          color: cardData.troopColor,
+          emissive: 0xbe123c,
+          emissiveIntensity: 0.4
+        })
+      );
+      body.position.y = 1.2;
+      mesh.add(body);
+
+      const head = new THREE.Mesh(
+        new THREE.SphereGeometry(0.24, 12, 12),
+        skinMat
+      );
+      head.position.y = 1.6;
+      mesh.add(head);
+
+      const hat = new THREE.Mesh(
+        new THREE.ConeGeometry(0.45, 0.6, 8),
+        new THREE.MeshStandardMaterial({ color: 0x111827 })
+      );
+      hat.position.y = 1.9;
+      mesh.add(hat);
+
+      const staff = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.05, 0.05, 1.1, 6),
+        new THREE.MeshStandardMaterial({ color: 0x78350f })
+      );
+      staff.position.set(0.35, 1.1, 0);
+      mesh.add(staff);
+
+      const fireOrb = new THREE.Mesh(
+        new THREE.SphereGeometry(0.18, 10, 10),
+        new THREE.MeshStandardMaterial({
+          color: 0xf97316,
+          emissive: 0xf97316,
+          emissiveIntensity: 1
+        })
+      );
+      fireOrb.position.y = 1.65;
+      staff.add(fireOrb);
+    } else {
+      const cube = new THREE.Mesh(
+        new THREE.BoxGeometry(0.8, 0.8, 0.8),
+        new THREE.MeshStandardMaterial({ color: cardData.troopColor })
+      );
+      cube.position.y = 0.4;
+      mesh.add(cube);
+    }
+
+    const startZ = isPlayer ? 9 : -9;
+    const dir = isPlayer ? -1 : 1;
+    const lanes = [-6, 6];
+    const laneX = lanes[Math.floor(Math.random() * lanes.length)];
+    mesh.position.set(laneX + (Math.random() - 0.5) * 0.8, 0.4, startZ);
+    scene.add(mesh);
+
+    const hb = createTroopHealthbar(isPlayer);
+    scene.add(hb.group);
+
+    const troop = {
+      mesh,
+      speed: cardData.speed,
+      baseDamage: cardData.damage * damageMultiplier,
+      dirZ: dir,
+      isPlayer,
+      hp: cardData.hp,
+      maxHp: cardData.hp,
+      attackCooldown: 0,
+      inCombat: false,
+      cardId: cardData.id,
+      hpGroup: hb.group,
+      hpFill: hb.fill,
+      hpWidth: hb.width,
+      laneX: laneX
+    };
+
+    state.troops.push(troop);
+    updateTroopHpBar(troop);
+    playSfxSpawn();
+  }
+
+  function spawnEnemyWave(diff) {
+    const cfg = diff || difficultyConfig[currentDifficulty] || difficultyConfig.Sedang;
+    const enemyTroops = state.troops.filter(t => !t.isPlayer).length;
+    const playerTroops = state.troops.filter(t => t.isPlayer).length;
+    if (enemyTroops >= cfg.enemyMaxTroops) return;
+
+    let maxNew = 1;
+    if (playerTroops > 3) maxNew = 3;
+    else if (playerTroops > 1) maxNew = 2;
+
+    const toSpawn = Math.min(maxNew, cfg.enemyMaxTroops - enemyTroops);
+    if (toSpawn <= 0) return;
+
+    for (let i=0;i<toSpawn;i++) {
+      let pool;
+      const enemyKing = state.towers.find(t => t.userData && !t.userData.isPlayer && t.userData.isKing);
+      let pressure = 1;
+      if (enemyKing) pressure = enemyKing.userData.hp / enemyKing.userData.maxHp;
+      if (pressure < 0.45) {
+        pool = CARDS.filter(c => c.cost >= 4);
+      } else if (playerTroops > enemyTroops) {
+        pool = CARDS.filter(c => c.speed >= 0.055);
+      } else {
+        pool = CARDS;
+      }
+      const card = pool[Math.floor(Math.random() * pool.length)];
+      spawnUnit(card, false, cfg.enemyDamageFactor);
+    }
+  }
+
+  // --- HAND / ELIXIR / QUIZ ---
+  function renderHand() {
+    const container = document.getElementById('hand-container');
+    container.innerHTML = '';
+
+    state.hand.forEach(cardIdx => {
+      const card = CARDS[cardIdx];
+      const slot = document.createElement('div');
+      slot.className = 'card-slot'; 
+      slot.id = `card-${cardIdx}`;
+      slot.onclick = () => tryPlayCard(cardIdx);
+
+      slot.innerHTML = `
+        <div class="card-cost"><span>${card.cost}</span></div>
+        <div class="card-emoji">${card.emoji}</div>
+        <div class="card-name">${card.name}</div>
+      `;
+      container.appendChild(slot);
+    });
+
+    const next = CARDS[state.nextCard];
+    const nextEl = document.getElementById('next-card-preview');
+    nextEl.innerHTML = `<div class="next-emoji">${next.emoji}</div>`;
+  }
+
+  function updateElixirUI() {
+    const pct = (state.elixir / state.maxElixir) * 100;
+    document.getElementById('elixir-fill').style.width = `${pct}%`;
+    document.getElementById('elixir-text').innerText = `${Math.floor(state.elixir)}/${state.maxElixir}`;
+  }
+
+  function updateCardStates() {
+    state.hand.forEach(cardIdx => {
+      const card = CARDS[cardIdx];
+      const el = document.getElementById(`card-${cardIdx}`);
+      if (el) {
+        if (state.elixir < card.cost) {
+          el.classList.add('disabled');
+        } else {
+          el.classList.remove('disabled');
+        }
+      }
+    });
+  }
+
+  function tryPlayCard(cardIdx) {
+    const card = CARDS[cardIdx];
+    if (state.elixir >= card.cost) {
+      state.elixir -= card.cost;
+      const diff = difficultyConfig[currentDifficulty] || difficultyConfig.Sedang;
+      spawnUnit(card, true, 1.0);
+      cycleCard(cardIdx);
+      updateElixirUI();
+      updateCardStates();
+    } else {
+      activeQuizCard = cardIdx;
+      showQuiz();
+    }
+  }
+
+  function cycleCard(playedCardIdx) {
+    const handIndex = state.hand.indexOf(playedCardIdx);
+    if (handIndex !== -1) {
+      state.hand[handIndex] = state.nextCard;
+      state.nextCard = (state.nextCard + 1) % CARDS.length;
+      renderHand();
+    }
+  }
+
+  function showQuiz() {
+    const q = QUESTIONS[Math.floor(Math.random() * QUESTIONS.length)];
+    document.getElementById('q-text').innerText = q.q;
+    const optDiv = document.getElementById('q-options');
+    optDiv.innerHTML = '';
+    
+    q.a.forEach((ans, i) => {
+      const btn = document.createElement('div');
+      btn.className = 'quiz-btn';
+      
+      const label = String.fromCharCode(65 + i);
+      const answerText = ans.includes('. ') ? ans.substring(3) : ans;
+
+      btn.innerHTML = `
+        <div class="quiz-btn-label">${label}</div>
+        <span style="font-family: sans-serif;">${answerText}</span>
+      `;
+      btn.onclick = () => answerQuiz(i === q.c);
+      optDiv.appendChild(btn);
+    });
+
+    document.getElementById('quiz-overlay').style.display = 'flex';
+  }
+
+  function answerQuiz(isCorrect) {
+    document.getElementById('quiz-overlay').style.display = 'none';
+    if (isCorrect) {
+      playSfxQuizGood();
+      state.elixir = Math.min(state.elixir + 4, state.maxElixir);
+      state.score += 100;
+      document.getElementById('game-score').innerText = `${state.score}`;
+      updateElixirUI();
+      updateCardStates();
+    } else {
+      playSfxQuizBad();
+    }
+    activeQuizCard = null;
+  }
+
+  // --- TOWER & DAMAGE ---
+  function updateGlobalHpBars() {
+    const playerKing = state.towers.find(t => t.userData && t.userData.isPlayer && t.userData.isKing);
+    const enemyKing  = state.towers.find(t => t.userData && !t.userData.isPlayer && t.userData.isKing);
+    if (!playerKing || !enemyKing) return;
+    const pRatio = Math.max(0, playerKing.userData.hp / playerKing.userData.maxHp);
+    const eRatio = Math.max(0, enemyKing.userData.hp / enemyKing.userData.maxHp);
+    document.getElementById('hp-global-player').style.width = (pRatio*100) + "%";
+    document.getElementById('hp-global-enemy').style.width  = (eRatio*100) + "%";
+  }
+
+  // puing tower saat hancur (versi lebih detail)
+  function createTowerRubble(tower) {
+    const d = tower.userData || {};
+    const rubbleGroup = new THREE.Group();
+
+    const baseRadius = d.isKing ? 1.5 : 1.1;
+    const teamColor = d.isPlayer ? 0x1d4ed8 : 0xef4444;
+
+    // dasar puing
+    const baseGeo = new THREE.CylinderGeometry(baseRadius * 1.1, baseRadius * 1.2, 0.35, 12);
+    const baseMat = new THREE.MeshStandardMaterial({
+      color: 0x4b5563,
+      roughness: 0.95
+    });
+    const base = new THREE.Mesh(baseGeo, baseMat);
+    base.position.y = 0.18;
+    base.castShadow = true;
+    base.receiveShadow = true;
+    rubbleGroup.add(base);
+
+    // blok-blok batu runtuhan
+    const stoneMat = new THREE.MeshStandardMaterial({
+      color: 0x9ca3af,
+      roughness: 0.9
+    });
+
+    for (let i = 0; i < 7; i++) {
+      const w = 0.5 + Math.random() * 0.6;
+      const h = 0.18 + Math.random() * 0.25;
+      const dpth = 0.4 + Math.random() * 0.4;
+      const block = new THREE.Mesh(
+        new THREE.BoxGeometry(w, h, dpth),
+        stoneMat
+      );
+      const ang = Math.random() * Math.PI * 2;
+      const r = baseRadius * 0.3 + Math.random() * (baseRadius * 0.9);
+      block.position.set(
+        Math.cos(ang) * r,
+        0.25 + Math.random() * 0.1,
+        Math.sin(ang) * r
+      );
+      block.rotation.y = Math.random() * Math.PI;
+      block.rotation.z = (Math.random() - 0.5) * 0.4;
+      block.castShadow = true;
+      block.receiveShadow = true;
+      rubbleGroup.add(block);
+    }
+
+    // potongan logam / sisa top tower
+    const metalMat = new THREE.MeshStandardMaterial({
+      color: 0x111827,
+      metalness: 0.5,
+      roughness: 0.4
+    });
+    for (let i = 0; i < 3; i++) {
+      const rod = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.06, 0.06, 0.9 + Math.random() * 0.4, 8),
+        metalMat
+      );
+      rod.position.set(
+        (Math.random() - 0.5) * baseRadius,
+        0.6,
+        (Math.random() - 0.5) * baseRadius
+      );
+      rod.rotation.z = (Math.random() - 0.5) * 1.0;
+      rod.rotation.x = (Math.random() - 0.5) * 0.6;
+      rod.castShadow = true;
+      rod.receiveShadow = true;
+      rubbleGroup.add(rod);
+    }
+
+    // kain bendera tim yang jatuh
+    const bannerGeo = new THREE.BoxGeometry(baseRadius * 1.4, 0.04, 0.4);
+    const bannerMat = new THREE.MeshStandardMaterial({
+      color: teamColor,
+      roughness: 0.7,
+      metalness: 0.15
+    });
+    const banner = new THREE.Mesh(bannerGeo, bannerMat);
+    banner.position.set(0, 0.24, baseRadius * 0.4);
+    banner.rotation.x = -0.15;
+    banner.castShadow = true;
+    banner.receiveShadow = true;
+    rubbleGroup.add(banner);
+
+    // bekas gosong di tanah
+    const scorchGeo = new THREE.CircleGeometry(baseRadius * 1.15, 20);
+    const scorchMat = new THREE.MeshBasicMaterial({
+      color: 0x111827,
+      transparent: true,
+      opacity: 0.55
+    });
+    const scorch = new THREE.Mesh(scorchGeo, scorchMat);
+    scorch.rotation.x = -Math.PI / 2;
+    scorch.position.y = 0.01;
+    rubbleGroup.add(scorch);
+
+    rubbleGroup.position.copy(tower.position);
+    scene.add(rubbleGroup);
+  }
+
+
+  function applyDamageToTower(tower, amount) {
+    const d = tower.userData;
+    if (!d || d.hp <= 0) return;
+    d.hp -= amount;
+    if (d.hp < 0) d.hp = 0;
+
+    const ratio = d.hp / d.maxHp;
+    if (d.hpFill) {
+      d.hpFill.scale.x = ratio;
+      d.hpFill.position.x = -(1.3 * (1 - ratio));
+    }
+
+    d.hitTimer = 0.35;
+
+    if (ratio === 0 && !d.rubble) {
+      d.rubble = true;
+
+      tower.visible = false;
+      if (d.hpGroup) d.hpGroup.visible = false;
+
+      createTowerRubble(tower);
+      playSfxTowerDown(); // 🔊 sfx tower hancur
+    }
+
+
+    updateGlobalHpBars();
+    checkGameOver();
+  }
+
+  function checkGameOver() {
+    if (!state.gameActive) return;
+    const playerKing = state.towers.find(t => t.userData && t.userData.isPlayer && t.userData.isKing);
+    const enemyKing  = state.towers.find(t => t.userData && !t.userData.isPlayer && t.userData.isKing);
+    if (!playerKing || !enemyKing) return;
+
+    if (enemyKing.userData.hp <= 0) {
+      endGame(true);
+    } else if (playerKing.userData.hp <= 0) {
+      endGame(false);
+    }
+  }
+
+  function endGame(playerWon) {
+    if (!state.gameActive) return;
+    state.gameActive = false;
+    document.getElementById('quiz-overlay').style.display = 'none';
+
+    const overlay = document.getElementById('result-overlay');
+    document.getElementById('result-title').innerText = playerWon ? "KAMU MENANG! 🎉" : "KAMU KALAH 😢";
+    document.getElementById('result-detail').innerText = "Skor kamu: " + state.score;
+    overlay.style.display = 'flex';
+
+    // 🚀 kirim skor ke Google Spreadsheet
+    submitScoreToLeaderboard();
+
+    if (playerWon) playSfxWin();
+    else playSfxLose();
+  }
+
+
+  // --- PATHING ---
+  function enforceBridgePath(troop) {
+    const mz = troop.mesh.position.z;
+    const mx = troop.mesh.position.x;
+    const ax = Math.abs(mx);
+
+    if (troop.isPlayer && mz < 2 && mz > -3 && ax > 4.5) {
+      return;
+    }
+    if (!troop.isPlayer && mz > -2 && mz < 3 && ax > 4.5) {
+      return;
+    }
+
+    if (mz < 2 && mz > -3) {
+      if (mx > 0 && mx < 5.7) troop.mesh.position.x += 0.04;
+      else if (mx < 0 && mx > -5.7) troop.mesh.position.x -= 0.04;
+    }
+  }
+
+  function updateCentralDefense(dt, time) {
+    if (!state.gameActive) return;
+
+    // Loop semua tower yang merupakan "king" dan punya meriam
+    const kings = state.towers.filter(t => {
+      const d = t.userData;
+      return d && d.isKing && d.cannonCooldown != null && d.hp > 0;
+    });
+
+    kings.forEach(king => {
+      const d = king.userData;
+      d.cannonCooldown -= dt;
+      if (d.cannonCooldown > 0) return;
+
+      let target = null;
+      let minDist = Infinity;
+
+      // Cari target: hanya troop musuh di sisi setengah lapangan tower itu
+      for (const troop of state.troops) {
+        if (troop.isPlayer === d.isPlayer) continue; // hanya musuh
+
+        const sameSide = d.isPlayer
+          ? (troop.mesh.position.z > 0)  // tower player: lindungi sisi atas
+          : (troop.mesh.position.z < 0); // tower musuh: lindungi sisi bawah
+
+        if (!sameSide) continue;
+
+        const dx = troop.mesh.position.x - king.position.x;
+        const dz = troop.mesh.position.z - king.position.z;
+        const dist = Math.sqrt(dx * dx + dz * dz);
+        if (dist < 18 && dist < minDist) {
+          minDist = dist;
+          target = troop;
+        }
+      }
+
+      if (!target) return;
+
+      // reset cooldown
+      d.cannonCooldown = 1.2;
+
+      const barrelPos = new THREE.Vector3(king.position.x, 4.8, king.position.z);
+
+      const isPlayerTower = d.isPlayer;
+      const bulletColor   = isPlayerTower ? 0x38bdf8 : 0xf97373;
+      const emissiveColor = isPlayerTower ? 0x0ea5e9 : 0xb91c1c;
+
+      // inti peluru
+      const coreGeo = new THREE.SphereGeometry(0.2, 14, 14);
+      const coreMat = new THREE.MeshStandardMaterial({
+        color: bulletColor,
+        emissive: emissiveColor,
+        emissiveIntensity: 1.1,
+        transparent: true,
+        opacity: 0.95
+      });
+      const core = new THREE.Mesh(coreGeo, coreMat);
+
+      // trail kecil di belakang peluru
+      const trailGeo = new THREE.CylinderGeometry(0.06, 0.06, 0.7, 8);
+      const trailMat = new THREE.MeshStandardMaterial({
+        color: emissiveColor,
+        emissive: emissiveColor,
+        emissiveIntensity: 0.7,
+        transparent: true,
+        opacity: 0.75
+      });
+      const trail = new THREE.Mesh(trailGeo, trailMat);
+      trail.rotation.x = Math.PI / 2;
+      trail.position.z = -0.35;
+      core.add(trail);
+
+      core.position.copy(barrelPos);
+      core.castShadow = true;
+      scene.add(core);
+
+      state.bullets.push({
+        mesh: core,
+        targetTroop: target,
+        speed: 14,
+        alive: true,
+        explodeTimer: 0,
+        damage: 34,
+        fromPlayer: isPlayerTower
+      });
+
+      // efek recoil ringan pada top tower
+      if (d.top) {
+        d.top.scale.set(1.06, 1.1, 1.06);
+        setTimeout(() => {
+          if (d.top) d.top.scale.set(1, 1, 1);
+        }, 120);
+      }
+    });
+  }
+
+
+  function updateBullets(dt) {
+    for (let i = state.bullets.length - 1; i >= 0; i--) {
+      const b = state.bullets[i];
+
+      // fase ledakan (setelah kena)
+      if (!b.alive) {
+        b.explodeTimer -= dt;
+
+        const tNorm = Math.max(b.explodeTimer, 0) / 0.25; // 1 -> 0
+        const scaleBase = 2.0 + (1 - tNorm) * 0.8;
+        b.mesh.scale.set(scaleBase, scaleBase, scaleBase);
+
+        if (b.mesh.material && b.mesh.material.emissiveIntensity !== undefined) {
+          b.mesh.material.emissiveIntensity = 1.5 * tNorm;
+          if (b.mesh.material.opacity !== undefined) {
+            b.mesh.material.opacity = 0.2 + 0.8 * tNorm;
+          }
+        }
+
+        if (b.explodeTimer <= 0) {
+          scene.remove(b.mesh);
+          state.bullets.splice(i, 1);
+        }
+        continue;
+      }
+
+      // masih terbang
+      if (!b.targetTroop || !b.targetTroop.mesh) {
+        b.alive = false;
+        b.explodeTimer = 0.0;
+        continue;
+      }
+
+      const targetPos = b.targetTroop.mesh.position.clone();
+      const dir = targetPos.clone().sub(b.mesh.position);
+      const dist = dir.length();
+      if (dist < 0.4) {
+        // kena target
+        b.targetTroop.hp -= b.damage;
+        updateTroopHpBar(b.targetTroop);
+
+        if (b.targetTroop.hp <= 0) {
+          const idx = state.troops.indexOf(b.targetTroop);
+          if (idx !== -1) {
+            if (b.targetTroop.hpGroup) scene.remove(b.targetTroop.hpGroup);
+            scene.remove(b.targetTroop.mesh);
+            state.troops.splice(idx, 1);
+            // hadiah score tetap dari sisi player saja
+            if (b.fromPlayer) {
+              state.score += 25;
+              document.getElementById('game-score').innerText = `${state.score}`;
+            }
+          }
+        }
+
+        // mulai animasi ledakan
+        playSfxHit();
+        b.alive = false;
+        b.explodeTimer = 0.25;
+        if (b.mesh.material && b.mesh.material.emissiveIntensity !== undefined) {
+          b.mesh.material.emissiveIntensity = 1.8;
+          if (b.mesh.material.opacity !== undefined) {
+            b.mesh.material.opacity = 1.0;
+          }
+        }
+        b.mesh.scale.set(2.2, 2.2, 2.2);
+        continue;
+      }
+
+      dir.normalize();
+      b.mesh.position.add(dir.multiplyScalar(b.speed * dt));
+    }
+  }
+
+
+  // --- MAIN LOOP ---
+  function animate() {
+    requestAnimationFrame(animate);
+    const dt = clock ? clock.getDelta() : 0.016;
+    const time = Date.now() * 0.008;
+
+    state.particles.forEach(p => {
+      if(p.userData && p.userData.jumpSpeed) {
+        p.position.y = 1.0 + Math.abs(Math.sin(time * p.userData.jumpSpeed + p.userData.jumpOffset)) * 0.9;
+        if (p.userData.flag) {
+          p.userData.flag.rotation.z = Math.sin(time * 2 + p.userData.jumpOffset) * 0.5;
+        }
+      }
+    });
+
+    // UPDATE TROOPS
+    for (let i = state.troops.length - 1; i >= 0; i--) {
+      const t = state.troops[i];
+      if (!t.mesh) continue;
+
+      t.inCombat = false;
+      let targetEnemy = null;
+      let targetTower = null;
+      let minDist = Infinity;
+
+      // cari musuh (troop)
+      for (let j = 0; j < state.troops.length; j++) {
+        if (i === j) continue;
+        const e = state.troops[j];
+        if (e.isPlayer === t.isPlayer) continue;
+        const dx = t.mesh.position.x - e.mesh.position.x;
+        const dz = t.mesh.position.z - e.mesh.position.z;
+        const dist = Math.sqrt(dx*dx + dz*dz);
+        if (dist < 1.3 && dist < minDist) {
+          minDist = dist;
+          targetEnemy = e;
+        }
+      }
+
+      // cari tower musuh terdekat
+      for (const tower of state.towers) {
+        const d = tower.userData;
+        if (!d || d.hp <= 0) continue;
+        if (d.isPlayer === t.isPlayer) continue;
+
+        const dx = t.mesh.position.x - tower.position.x;
+        const dz = t.mesh.position.z - tower.position.z;
+        const dist = Math.sqrt(dx*dx + dz*dz);
+        if (dist < 2.0 && dist < minDist) {
+          minDist = dist;
+          targetEnemy = null;
+          targetTower = tower;
+        }
+      }
+
+      // serangan ke troop / tower
+      if (targetEnemy || targetTower) {
+        t.inCombat = true;
+        t.attackCooldown -= dt;
+        if (t.attackCooldown <= 0) {
+          t.attackCooldown = 0.45;
+          const dmgFactorByCard =
+            (t.cardId === "RO" ? 1.2 :
+             t.cardId === "FIR" ? 1.15 : 1.0);
+          const totalDmg = t.baseDamage * 0.55 * dmgFactorByCard;
+
+          if (targetEnemy) {
+            targetEnemy.hp -= totalDmg;
+            updateTroopHpBar(targetEnemy);
+            if (targetEnemy.hp <= 0) {
+              const idx = state.troops.indexOf(targetEnemy);
+              if (idx !== -1) {
+                if (targetEnemy.hpGroup) scene.remove(targetEnemy.hpGroup);
+                scene.remove(targetEnemy.mesh);
+                state.troops.splice(idx, 1);
+                if (t.isPlayer) {
+                  state.score += 20;
+                  document.getElementById('game-score').innerText = `${state.score}`;
+                }
+              }
+            }
+          } else if (targetTower) {
+            applyDamageToTower(targetTower, totalDmg);
+
+            const retaliation = 12 + cardCostFromId(t.cardId) * 2;
+            t.hp -= retaliation;
+            updateTroopHpBar(t);
+            if (t.hp <= 0) {
+              if (t.hpGroup) scene.remove(t.hpGroup);
+              scene.remove(t.mesh);
+              state.troops.splice(i, 1);
+              continue;
+            }
+          }
+
+          // animasi kecil
+          if (t.cardId === "FIR") {
+            t.mesh.scale.set(1.2,1.2,1.2);
+            setTimeout(()=> t.mesh.scale.set(1,1,1),120);
+          } else if (t.cardId === "RO") {
+            t.mesh.position.y += 0.12;
+            setTimeout(()=> t.mesh.position.y -= 0.12,100);
+          } else if (t.cardId === "SPE") {
+            t.mesh.scale.set(1.05,1.05,1.05);
+            setTimeout(()=> t.mesh.scale.set(1,1,1),120);
+          }
+
+          playSfxHit();
+        }
+      }
+
+// GERAK MAJU – versi baru: selalu cari tower musuh terdekat,
+// lalu:
+// - sebelum sungai: tetap di laneX dan maju lurus
+// - sesudah sungai: homing ke tower yang masih hidup
+if (!t.inCombat && state.gameActive) {
+  // cari tower musuh terdekat yang masih hidup
+  let nearestTower = null;
+  let nearestDist = Infinity;
+
+  for (const tw of state.towers) {
+    const dTw = tw.userData;
+    if (!dTw || dTw.hp <= 0) continue;                // sudah hancur, abaikan
+    if (dTw.isPlayer === t.isPlayer) continue;        // tower tim sendiri, abaikan
+
+    const dx = tw.position.x - t.mesh.position.x;
+    const dz = tw.position.z - t.mesh.position.z;
+    const dist = Math.sqrt(dx * dx + dz * dz);
+    if (dist < nearestDist) {
+      nearestDist = dist;
+      nearestTower = tw;
+    }
+  }
+
+  if (nearestTower) {
+    const targetPos = nearestTower.position;
+
+    // sebelum sungai -> pakai lane & gerak lurus
+    const beforeRiver = t.isPlayer
+      ? (t.mesh.position.z > 1.5)   // player masih di sisi atas
+      : (t.mesh.position.z < -1.5); // musuh masih di sisi bawah
+
+    if (beforeRiver) {
+      const dirZ = t.isPlayer ? -1 : 1;
+      t.mesh.position.z += dirZ * t.speed;
+
+      // jaga supaya x tetap dekat laneX (biar tetap dua jalur)
+      const dxLane = t.laneX - t.mesh.position.x;
+      const stepX  = Math.sign(dxLane) * Math.min(Math.abs(dxLane), t.speed * 0.6);
+      t.mesh.position.x += stepX;
+    } else {
+      // sesudah menyeberang sungai -> homing ke tower musuh terdekat
+      const dirVec = new THREE.Vector3(
+        targetPos.x - t.mesh.position.x,
+        0,
+        targetPos.z - t.mesh.position.z
+      );
+      const len = dirVec.length();
+      if (len > 0.01) {
+        dirVec.normalize();
+        t.mesh.position.addScaledVector(dirVec, t.speed);
+      }
+    }
+
+    // animasi "loncat kecil" jalan
+    t.mesh.position.y = 0.4 + Math.abs(Math.sin(time * 2)) * 0.2;
+  }
+}
+
+
+      // hapus kalau keluar arena
+      if (t.mesh.position.z < -22 || t.mesh.position.z > 22) {
+        if (t.hpGroup) scene.remove(t.hpGroup);
+        scene.remove(t.mesh);
+        state.troops.splice(i, 1);
+      }
+
+      updateTroopHpBar(t);
+    }
+
+    updateCentralDefense(dt, time);
+    updateBullets(dt);
+
+    state.clouds.forEach(cloud => {
+      cloud.position.x += cloud.userData.speed;
+      cloud.position.y += Math.sin(time * 0.3 + cloud.position.x) * 0.01;
+      if (cloud.position.x > 35) cloud.position.x = -35;
+    });
+
+    state.towers.forEach(t => {
+      const d = t.userData;
+      if (!d) return;
+
+      const wobble = Math.sin(time * 1.2 + d.wobbleOffset) * 0.06;
+      t.rotation.y = wobble;
+
+      if (d.hitTimer > 0) {
+        d.hitTimer -= dt;
+        const s = 1 + 0.12 * Math.sin(d.hitTimer * 30);
+        t.scale.set(s, 1, s);
+      } else {
+        t.scale.set(1, 1, 1);
+      }
+
+      if (d.top && d.hp > 0) {
+        d.top.position.y += Math.sin(time * 1.5 + d.wobbleOffset) * 0.002;
+      }
+      if (d.windows && d.hp > 0) {
+        const base = (d.hp / d.maxHp);
+        const flicker = 0.2 + 0.5*base*Math.abs(Math.sin(time*2 + d.wobbleOffset));
+        d.windows.forEach(w => {
+          if (w.material) w.material.emissiveIntensity = flicker;
+        });
+      }
+      if (d.flag && d.hp > 0) {
+        d.flag.rotation.y = Math.sin(time * 2 + d.wobbleOffset) * 0.4;
+      }
+      if (d.hpGroup && d.hp > 0) {
+        d.hpGroup.lookAt(camera.position);
+      }
+    });
+
+    if (controls) controls.update();
+    renderer.render(scene, camera);
+  }
+
+  window.addEventListener('resize', () => {
+    if (!camera || !renderer) return;
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+  });
+</script>
+</body>
+</html>
